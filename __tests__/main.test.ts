@@ -5,7 +5,10 @@ import { run } from '../src/main'
 
 import { context } from '@actions/github'
 import axios from 'axios'
-import { Function } from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/serverless/functions/v1/function'
+import {
+    Function,
+    Version
+} from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/serverless/functions/v1/function'
 import { ServiceAccount } from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/iam/v1/service_account'
 import fs from 'fs'
 import os from 'os'
@@ -336,6 +339,68 @@ describe('action', () => {
                 ])
             })
         )
+    })
+
+    it('should inherit unspecified settings from the previous version when inherit-from-previous-version is set', async () => {
+        __setFunctionList([
+            Function.fromJSON({
+                id: 'functionid',
+                name: 'my-function',
+                folder_id: 'folderid',
+                status: 'ACTIVE'
+            })
+        ])
+        __setVersionList([
+            Version.fromJSON({
+                id: 'previous-version-id',
+                functionId: 'functionid',
+                runtime: 'python312',
+                entrypoint: 'main.handler',
+                resources: { memory: 268435456 },
+                executionTimeout: { seconds: 42 },
+                serviceAccountId: 'serviceaccountid',
+                environment: { FOO: 'inherited' },
+                tags: [],
+                secrets: [],
+                mounts: [],
+                storageMounts: [],
+                namedServiceAccounts: {}
+            })
+        ])
+
+        setupMockInputs({
+            'folder-id': 'folderid',
+            'function-name': 'my-function',
+            'inherit-from-previous-version': 'true',
+            ...ycSaJsonCredentials
+        })
+
+        await run()
+
+        expect(setFailedMock).not.toHaveBeenCalled()
+        expect(FunctionServiceMock.createVersion).toHaveBeenCalledWith(
+            expect.objectContaining({
+                runtime: 'python312',
+                entrypoint: 'main.handler',
+                resources: expect.objectContaining({ memory: 268435456 }),
+                executionTimeout: expect.objectContaining({ seconds: 42 }),
+                serviceAccountId: 'serviceaccountid',
+                environment: { FOO: 'inherited' }
+            })
+        )
+    })
+
+    it('should fail with a clear error when runtime/entrypoint are missing and there is no previous version to inherit from', async () => {
+        setupMockInputs({
+            'folder-id': 'folderid',
+            'function-name': 'my-function',
+            'inherit-from-previous-version': 'true',
+            ...ycSaJsonCredentials
+        })
+
+        await run()
+
+        expect(setFailedMock).toHaveBeenCalled()
     })
 })
 

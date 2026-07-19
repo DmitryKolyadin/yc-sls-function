@@ -98,6 +98,35 @@ mount:bucket/prefix:ro
       mount:bucket/prefix:ro
 ```
 
+### Deploying without repeating every setting
+
+By default, any input you leave empty falls back to this action's own hardcoded default (e.g. `memory: 128Mb`,
+`execution-timeout: 5`), not to whatever is currently deployed. Set `inherit-from-previous-version: true` to change
+that: every input marked "(inheritable)" in [action.yml](action.yml) then falls back to the function's current
+`$latest` version instead, so you only need to pass the code plus whatever you actually want to change.
+
+```yaml
+- name: Deploy new code only, keep all other settings as-is
+  uses: yc-actions/yc-sls-function@v4
+  with:
+    inherit-from-previous-version: true
+    folder-id: ***
+    function-name: my-function
+    # runtime, entrypoint, memory, timeout, env, secrets, service account, etc.
+    # are all picked up from the function's current version.
+```
+
+Notes:
+* Has no effect the first time a function is created - there's no previous version to inherit from yet, so all
+  hardcoded defaults apply as usual.
+* `runtime` and `entrypoint` are otherwise required; with this mode on they're only required if the function has
+  no previous version.
+* Multiline inputs (`environment`, `secrets`, `tags`, `mounts`) are inherited only when left completely empty -
+  there's no way to explicitly clear an inherited list while this mode is on, pass at least one explicit line
+  instead.
+* `service-account`/`async-*-sa-id` inheritance is skipped as soon as you provide either the `-id` or the
+  `-name` variant explicitly, so an explicit name is never silently overridden by an inherited id.
+
 ### Authorization
 One of `yc-sa-json-credentials`, `yc-iam-token` or `yc-sa-id` should be provided depending on the authentication method
 you

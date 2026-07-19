@@ -29,17 +29,29 @@ inputs:
     default: ''
     required: false
   mounts:
-    description: 'Object Storage mounts. Multiline. Short syntax: <bucket>:<mount-point>[:<prefix>][:ro]'
+    description: 'Object Storage mounts. Multiline. Short syntax: <bucket>:<mount-point>[:<prefix>][:ro] (inheritable)'
     required: false
     default: ''
+  inherit-from-previous-version:
+    description: |
+      Special deploy mode: for every input below marked "(inheritable)", an empty/not-provided
+      value is taken from the function's current `$latest` version instead of falling back to
+      this action's own hardcoded default. This lets you deploy code-only changes, or tweak a
+      single setting, without having to repeat every other parameter on each run.
+      Has no effect the first time a function is created (there is no previous version yet).
+      Multiline inputs (environment, secrets, tags, mounts) are inherited only when left
+      completely empty; there is no way to explicitly clear an inherited list while this mode
+      is on - pass at least one explicit line instead.
+    default: 'false'
+    required: false
   runtime:
-    description: 'Runtime for function.'
+    description: 'Runtime for function. (inheritable)'
     default: ''
-    required: true
+    required: false
   entrypoint:
-    description: 'Entrypoint for function'
+    description: 'Entrypoint for function (inheritable)'
     default: ''
-    required: true
+    required: false
   include:
     description: 'Source directories for cloud function in git repo. Multiline'
     default: '.'
@@ -53,19 +65,19 @@ inputs:
     required: false
     default: '.'
   memory:
-    description: 'Memory in Mb. Pattern: ^\d+Mb$'
-    default: '128Mb'
+    description: 'Memory in Mb. Pattern: ^\d+Mb$ (inheritable, hardcoded default 128Mb)'
+    default: ''
     required: false
   environment:
-    description: 'Env variables for function. Multiline'
+    description: 'Env variables for function. Multiline (inheritable)'
     default: ''
     required: false
   execution-timeout:
-    description: 'Execution timeout in seconds'
-    default: '5'
+    description: 'Execution timeout in seconds (inheritable, hardcoded default 5)'
+    default: ''
     required: false
   service-account:
-    description: 'Service account ID for function'
+    description: 'Service account ID for function (inheritable)'
     default: ''
     required: false
   service-account-name:
@@ -73,37 +85,38 @@ inputs:
     default: ''
     required: false
   secrets:
-    description: 'Lockbox secrets. Pattern: "<environmentVariable>=<secretId>/<versionId>/<secretKey>". Multiline'
+    description: 'Lockbox secrets. Pattern: "<environmentVariable>=<secretId>/<versionId>/<secretKey>". Multiline (inheritable)'
     default: ''
     required: false
   network-id:
-    description: 'Function version connectivity. If specified the version will be attached to specified network/subnet(s).'
+    description: 'Function version connectivity. If specified the version will be attached to specified network/subnet(s). (inheritable)'
     default: ''
     required: false
   tags:
-    description: 'Version tags. Multiline'
+    description: 'Version tags. Multiline (inheritable)'
     default: ''
     required: false
   logs-disabled:
-    description: 'Disable functions logging. Default false'
-    default: 'false'
+    description: 'Disable functions logging. (inheritable, hardcoded default false)'
+    default: ''
     required: false
   logs-group-id:
-    description: 'Logs group ID. If NOT set, logs will write to auto-created default group.'
+    description: 'Logs group ID. If NOT set, logs will write to auto-created default group. (inheritable)'
     default: ''
     required: false
   log-level:
-    description: 'Minimum log level (trace, debug, info, warn, error, fatal)'
+    description: 'Minimum log level (trace, debug, info, warn, error, fatal) (inheritable)'
     default: ''
     required: false
   async:
-    description: 'Enable async invocation'
-    default: 'false'
+    description: 'Enable async invocation (inheritable: on if the previous version had async invocation configured)'
+    default: ''
     required: false
   async-sa-id:
     description: |
       Service account which has permission to invoke the function.
       If not set, the function will be invoked with the default service account.
+      (inheritable)
     default: ''
     required: false
   async-sa-name:
@@ -115,19 +128,20 @@ inputs:
     required: false
   async-retries-count:
     description:
-      'Number of retries of async invocations.'
+      'Number of retries of async invocations. (inheritable, hardcoded default 3)'
     default: ''
     required: false
   async-success-ymq-arn:
     description: |
       Target for successful result of the version's invocation.
-      Queue ARN if target should send a result to YMQ.
+      Queue ARN if target should send a result to YMQ. (inheritable)
     default: ''
     required: false
   async-success-sa-id:
     description: |
       Target for successful result of the version's invocation.
       Id of service account which has write permission on the queue, if target should send a result to YMQ.
+      (inheritable)
     default: ''
     required: false
   async-success-sa-name:
@@ -140,13 +154,14 @@ inputs:
   async-failure-ymq-arn:
     description: |
       Target for unsuccessful result, if all retries failed.
-      Queue ARN if target should send a result to YMQ.
+      Queue ARN if target should send a result to YMQ. (inheritable)
     default: ''
     required: false
   async-failure-sa-id:
     description: |
       Target for unsuccessful result, if all retries failed.
       Service account which has write permission on the queue, if target should send a result to YMQ.
+      (inheritable)
     default: ''
     required: false
   async-failure-sa-name:

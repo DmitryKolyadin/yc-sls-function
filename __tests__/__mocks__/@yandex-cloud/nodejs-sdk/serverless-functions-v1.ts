@@ -95,7 +95,13 @@ export const FunctionServiceMock = {
     }),
     listVersions: jest.fn().mockImplementation(() => ({
         versions
-    }))
+    })),
+    getVersionByTag: jest.fn().mockImplementation(() => {
+        if (versions.length === 0) {
+            throw new Error('5 NOT_FOUND: version not found')
+        }
+        return versions[versions.length - 1]
+    })
 }
 
 export function __setCreateFunctionFail(value: boolean) {

@@ -15,7 +15,6 @@ import {
     getBooleanInput,
     getIDToken,
     getInput,
-    getMultilineInput,
     info,
     setCommandEcho,
     setFailed,
@@ -45,8 +44,6 @@ import { CreateFunctionVersionMetadata } from '@yandex-cloud/nodejs-sdk/serverle
 import {
     parseEnvironmentVariables,
     parseLockboxVariables,
-    parseLogLevel,
-    parseMemory,
     parseMounts,
     parseServiceAccountJsonFile,
     Secret
@@ -54,6 +51,8 @@ import {
 import { writeSummary } from './summary'
 import { zipSources } from './zip'
 import { exchangeToken } from './auth'
+import { fetchPreviousVersion } from './inherit'
+import { buildActionInputs } from './resolve-inputs'
 import archiver from 'archiver'
 
 /**
@@ -103,7 +102,10 @@ async function uploadToS3(
  * @returns Function ID (existing or newly created)
  * @throws {Error} If function creation fails or ID cannot be resolved
  */
-async function getOrCreateFunctionId(session: Session, { folderId, functionName }: ActionInputs): Promise<string> {
+async function getOrCreateFunctionId(
+    session: Session,
+    { folderId, functionName }: Pick<ActionInputs, 'folderId' | 'functionName'>
+): Promise<string> {
     startGroup('Find function id')
     const client = session.client(functionService.FunctionServiceClient)
 
@@ -346,44 +348,18 @@ export async function run(): Promise<void> {
             throw new Error('No credentials')
         }
         const session = new Session(sessionConfig)
-        inputs = {
-            folderId: getInput('folder-id', { required: true }),
-            functionName: getInput('function-name', { required: true }),
-            runtime: getInput('runtime', { required: true }),
-            entrypoint: getInput('entrypoint', { required: true }),
-            memory: parseMemory(getInput('memory', { required: false }) || '128Mb'),
-            include: getMultilineInput('include', { required: false }),
-            excludePattern: getMultilineInput('exclude', { required: false }),
-            sourceRoot: getInput('source-root', { required: false }) || '.',
-            executionTimeout: parseInt(getInput('execution-timeout', { required: false }) || '5', 10),
-            environment: getMultilineInput('environment', { required: false }),
-            serviceAccount: getInput('service-account', { required: false }),
-            serviceAccountName: getInput('service-account-name', { required: false }),
-            bucket: getInput('bucket', { required: false }),
-            description: getInput('description', { required: false }),
-            secrets: getMultilineInput('secrets', { required: false }),
-            networkId: getInput('network-id', { required: false }),
-            tags: getMultilineInput('tags', { required: false }),
-            logsDisabled: getBooleanInput('logs-disabled', { required: false }) || false,
-            logsGroupId: getInput('logs-group-id', { required: false }),
-            logLevel: parseLogLevel(getInput('log-level', { required: false, trimWhitespace: true })),
-            async: getBooleanInput('async', { required: false }),
-            asyncSaId: getInput('async-sa-id', { required: false }),
-            asyncSaName: getInput('async-sa-name', { required: false }),
-            asyncRetriesCount: parseInt(getInput('async-retries-count', { required: false }) || '3', 10),
-            asyncSuccessYmqArn: getInput('async-success-ymq-arn', { required: false }),
-            asyncSuccessSaId: getInput('async-success-sa-id', { required: false }),
-            asyncFailureYmqArn: getInput('async-failure-ymq-arn', { required: false }),
-            asyncFailureSaId: getInput('async-failure-sa-id', { required: false }),
-            asyncSuccessSaName: getInput('async-success-sa-name', { required: false }),
-            asyncFailureSaName: getInput('async-failure-sa-name', { required: false }),
-            mounts: getMultilineInput('mounts', { required: false })
-        }
+        const folderId = getInput('folder-id', { required: true })
+        const functionName = getInput('function-name', { required: true })
+        functionId = await getOrCreateFunctionId(session, { folderId, functionName })
+
+        const inheritFromPreviousVersion = getBooleanInput('inherit-from-previous-version', { required: false })
+        const previousVersion = inheritFromPreviousVersion ? await fetchPreviousVersion(session, functionId) : undefined
+
+        inputs = buildActionInputs(folderId, functionName, previousVersion)
         info('Function inputs set')
         const archive = archiver('zip', { zlib: { level: 9 } })
         const fileContents = await zipSources(inputs, archive)
         info(`Buffer size: ${Buffer.byteLength(fileContents)}b`)
-        functionId = await getOrCreateFunctionId(session, inputs)
         if (inputs.bucket) {
             bucketObjectName = await uploadToS3(inputs.bucket, functionId, sessionConfig, fileContents)
         }
