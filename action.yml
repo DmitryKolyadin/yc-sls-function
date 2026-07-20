@@ -28,6 +28,15 @@ inputs:
     description: 'Object Storage bucket name for code'
     default: ''
     required: false
+  bucket-object-name:
+    description: |
+      Object name/key template for the code archive uploaded to `bucket`. Supports
+      `{function-id}` and `{sha}` placeholders. Defaults to `{function-id}/{sha}.zip` when
+      not set. Use a fixed key (e.g. `releases/app.zip`, no placeholders) to keep overwriting
+      the same object on every deploy - useful when other tooling (e.g. Terraform's initial
+      function `package` block) bootstraps from a known, stable key.
+    default: ''
+    required: false
   mounts:
     description: 'Object Storage mounts. Multiline. Short syntax: <bucket>:<mount-point>[:<prefix>][:ro] (inheritable)'
     required: false

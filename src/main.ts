@@ -58,20 +58,25 @@ import archiver from 'archiver'
 /**
  * Uploads function code zip archive to Yandex Object Storage.
  *
- * Creates object name from function ID and GitHub commit SHA.
+ * By default, creates object name from function ID and GitHub commit SHA. If
+ * `objectNamePattern` is given, it is used instead, with `{function-id}` and `{sha}`
+ * placeholders substituted - e.g. `releases/app.zip` (no placeholders, fixed key) or
+ * `releases/{function-id}.zip`.
  *
  * @param bucket - S3 bucket name
  * @param functionId - Yandex Cloud function ID
  * @param sessionConfig - Session configuration with auth credentials
  * @param fileContents - Zip file buffer to upload
- * @returns Object name in format: `{functionId}/{GITHUB_SHA}.zip`
+ * @param objectNamePattern - Optional object name/key template
+ * @returns Object name that was actually used
  * @throws {Error} If GITHUB_SHA environment variable is missing
  */
 async function uploadToS3(
     bucket: string,
     functionId: string,
     sessionConfig: SessionConfig,
-    fileContents: Buffer
+    fileContents: Buffer,
+    objectNamePattern?: string
 ): Promise<string> {
     const { GITHUB_SHA } = process.env
 
@@ -81,7 +86,9 @@ async function uploadToS3(
     }
 
     //setting object name
-    const bucketObjectName = `${functionId}/${GITHUB_SHA}.zip`
+    const bucketObjectName = objectNamePattern
+        ? objectNamePattern.replace(/{function-id}/g, functionId).replace(/{sha}/g, GITHUB_SHA)
+        : `${functionId}/${GITHUB_SHA}.zip`
     info(`Upload to bucket: "${bucket}/${bucketObjectName}"`)
 
     const storageService = new StorageServiceImpl(sessionConfig)
@@ -361,7 +368,13 @@ export async function run(): Promise<void> {
         const fileContents = await zipSources(inputs, archive)
         info(`Buffer size: ${Buffer.byteLength(fileContents)}b`)
         if (inputs.bucket) {
-            bucketObjectName = await uploadToS3(inputs.bucket, functionId, sessionConfig, fileContents)
+            bucketObjectName = await uploadToS3(
+                inputs.bucket,
+                functionId,
+                sessionConfig,
+                fileContents,
+                inputs.bucketObjectName || undefined
+            )
         }
         versionId = await createFunctionVersion(session, functionId, fileContents, bucketObjectName, inputs)
         setOutput('time', new Date().toTimeString())

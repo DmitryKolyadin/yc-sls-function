@@ -126,6 +126,7 @@ export function buildActionInputs(
         ),
         serviceAccountName: serviceAccountNameInput,
         bucket: getInput('bucket', { required: false }),
+        bucketObjectName: getInput('bucket-object-name', { required: false }),
         description: getInput('description', { required: false }),
         secrets: resolveLines(
             getMultilineInput('secrets', { required: false }),

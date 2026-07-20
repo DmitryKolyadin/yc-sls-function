@@ -44,6 +44,13 @@ export type ActionInputs = {
     /** S3 bucket name for code storage (optional, for >3.5MB) */
     bucket: string
 
+    /**
+     * Object name/key template for the code archive uploaded to `bucket`.
+     * Supports `{function-id}` and `{sha}` placeholders.
+     * Empty means the default `{function-id}/{sha}.zip` behavior.
+     */
+    bucketObjectName: string
+
     /** Function version description */
     description: string
 
