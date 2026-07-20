@@ -47,7 +47,7 @@ const previousVersion: Version = Version.fromPartial({
     resources: { memory: 268435456 }, // 256Mb
     executionTimeout: { seconds: 42 },
     serviceAccountId: 'inherited-sa-id',
-    tags: ['production'],
+    tags: ['$latest', 'production'],
     environment: { FOO: 'inherited' },
     connectivity: { networkId: 'inherited-network' },
     secrets: [{ id: 'secret-id', versionId: 'v1', key: 'key', environmentVariable: 'SECRET_ENV' }],

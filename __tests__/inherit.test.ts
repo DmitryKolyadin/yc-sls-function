@@ -1,6 +1,14 @@
 import { expect, test } from '@jest/globals'
-import { envMapToLines, mountsToLines, secretsToLines } from '../src/inherit'
+import { envMapToLines, inheritableTags, mountsToLines, secretsToLines } from '../src/inherit'
 import { Mount_Mode } from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/serverless/functions/v1/function'
+
+test('inheritableTags drops the reserved $latest tag Yandex Cloud attaches to every version', () => {
+    expect(inheritableTags(['$latest', 'production', 'v2'])).toEqual(['production', 'v2'])
+})
+
+test('inheritableTags leaves ordinary tags untouched', () => {
+    expect(inheritableTags(['production', 'v2'])).toEqual(['production', 'v2'])
+})
 
 test('envMapToLines converts a version environment map back into KEY=value lines', () => {
     expect(envMapToLines({ FOO: 'bar', BAZ: 'qux' })).toEqual(['FOO=bar', 'BAZ=qux'])

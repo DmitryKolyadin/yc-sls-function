@@ -13,7 +13,7 @@ import { getInput, getMultilineInput } from '@actions/core'
 import { Version } from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/serverless/functions/v1/function'
 import { LogLevel_Level } from '@yandex-cloud/nodejs-sdk/dist/generated/yandex/cloud/logging/v1/log_entry'
 import { ActionInputs } from './action-inputs'
-import { envMapToLines, mountsToLines, secretsToLines } from './inherit'
+import { envMapToLines, inheritableTags, mountsToLines, secretsToLines } from './inherit'
 import { MB, parseLogLevel, parseMemory } from './parse'
 
 const DEFAULT_MEMORY = 128 * MB
@@ -133,7 +133,10 @@ export function buildActionInputs(
             previousVersion && secretsToLines(previousVersion.secrets)
         ),
         networkId: resolveString(getInput('network-id'), previousVersion?.connectivity?.networkId),
-        tags: resolveLines(getMultilineInput('tags', { required: false }), previousVersion?.tags),
+        tags: resolveLines(
+            getMultilineInput('tags', { required: false }),
+            previousVersion && inheritableTags(previousVersion.tags)
+        ),
         logsDisabled: resolveBoolean('logs-disabled', previousVersion?.logOptions?.disabled, false),
         logsGroupId: resolveString(getInput('logs-group-id'), previousVersion?.logOptions?.logGroupId),
         logLevel:

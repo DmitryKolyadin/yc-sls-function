@@ -49,6 +49,15 @@ export async function fetchPreviousVersion(session: Session, functionId: string)
     }
 }
 
+/**
+ * Filters out reserved tags (like `$latest`) that Yandex Cloud attaches to every version
+ * automatically. These aren't valid to send back in a `CreateVersion` request and are re-applied
+ * by the platform itself, so they must be dropped before a version's tags can be inherited.
+ */
+export function inheritableTags(tags: string[]): string[] {
+    return tags.filter(tag => !tag.startsWith('$'))
+}
+
 /** Converts a version's environment map back into `KEY=value` lines. */
 export function envMapToLines(environment: { [key: string]: string }): string[] {
     return Object.entries(environment).map(([key, value]) => `${key}=${value}`)
